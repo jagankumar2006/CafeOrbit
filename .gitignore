@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+npm-debug.log
+
+# Environment variables
+.env
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+cafeorbit.db
+
+# User Uploads
+uploads/
+frontend/qr_table_*.png
+
+# OS generated files
+.DS_Store
+Thumbs.db
