@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CafeOrbit - Point of Sale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            espresso: '#2C1810',
+            coffee: '#4A2C2A',
+            cappuccino: '#8B5A44',
+            latte: '#D4A373',
+            cream: '#FAEDCD',
+            oat: '#FEFAE0',
+            charcoal: '#264653'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: #1a1511; 
+      background-image: url('/cafeorbit_bg.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(15, 10, 5, 0.7) 0%, rgba(20, 15, 10, 0.5) 100%);
+      backdrop-filter: blur(12px);
+      z-index: -1;
+    }
+    .glass-panel {
+      background: rgba(20, 15, 10, 0.85);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.5); border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.8); }
+  </style>
+</head>
+<body class="h-screen flex flex-col text-gray-200 overflow-hidden relative">
+  <div class="bg-overlay"></div>
+  
+  <header class="glass-panel shadow-2xl py-3 px-6 flex justify-between items-center z-10 shrink-0 border-b border-amber-600/30">
+    <div class="flex items-center gap-3">
+      <div class="bg-gradient-to-br from-amber-600 to-orange-800 p-2 rounded-lg text-white shadow-lg">
+        <i class="fa-solid fa-cash-register text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="font-outfit text-2xl font-bold tracking-wide text-white">POS Terminal</h1>
+        <p class="text-xs text-amber-500/80">Active Session: <span id="session-info" class="text-red-400">Offline</span></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSessionModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-200 text-xs px-3 py-1.5 rounded font-semibold text-white"><i class="fa-solid fa-shop"></i> Sessions</button>
+      <button onclick="openTableSelector()" class="bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-200 text-xs px-3 py-1.5 rounded font-semibold text-white"><i class="fa-solid fa-chair"></i> Tables</button>
+    </div>
+    <div class="flex items-center gap-4 text-right">
+      <div class="flex flex-col text-right border-r border-white/20 pr-4">
+        <span class="text-sm font-bold text-white" id="user-name-display">Staff</span>
+        <span class="text-[10px] text-amber-500/80 uppercase tracking-wider" id="user-role-display">USER</span>
+      </div>
+      <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium mr-2" title="Sign Out"><i class="fa-solid fa-power-off"></i></button>
+      <div class="flex flex-col justify-center">
+        <span class="font-outfit font-bold text-white text-3xl tracking-wider">CafeOrbit</span>
+        <span class="text-[10px] text-amber-500/80 tracking-widest uppercase">POS System</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 flex overflow-hidden z-10 relative">
+    <!-- Left Workspace -->
+    <section class="w-2/3 p-4 flex flex-col gap-4 overflow-hidden border-r border-white/10">
+      <div class="flex gap-2 overflow-x-auto pb-2 custom-scroll" id="categories-tabs"></div>
+      <div class="flex-1 overflow-y-auto custom-scroll pr-1">
+        <div class="grid grid-cols-3 gap-4" id="products-grid"></div>
+      </div>
+    </section>
+
+    <!-- Right Workspace: Tabs -->
+    <section class="w-1/3 glass-panel flex flex-col border-l border-white/10">
+      <div class="flex border-b border-white/10 bg-black/40">
+        <button id="tab-btn-cart" onclick="switchRightTab('cart')" class="flex-1 py-3 text-center font-bold text-amber-500 border-b-2 border-amber-500 transition-colors bg-white/5"><i class="fa-solid fa-receipt mr-1"></i> Current Order</button>
+        <button id="tab-btn-kitchen" onclick="switchRightTab('kitchen')" class="flex-1 py-3 text-center font-bold text-gray-400 border-b-2 border-transparent hover:bg-white/5 hover:text-gray-200 transition-colors relative"><i class="fa-solid fa-fire-burner mr-1"></i> Kitchen Tracker <span id="kitchen-badge" class="absolute top-2 right-4 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full hidden">0</span></button>
+      </div>
+
+      <!-- CART VIEW -->
+      <div id="view-cart" class="flex-1 flex flex-col p-4 overflow-hidden">
+        <div>
+          <div class="flex justify-between items-center text-xs text-gray-400 mb-3 bg-white/5 p-2 rounded border border-white/10">
+            <span>Table: <strong id="active-table-display" class="text-amber-500">None</strong></span>
+            <span><strong id="order-number-display" class="text-amber-500">ORD-XXXX</strong></span>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scroll pr-1 mb-4 flex flex-col gap-3" id="cart-list">
+          <div class="my-auto text-center text-gray-500 py-8">
+            <i class="fa-solid fa-basket-shopping text-4xl mb-2 text-white/20"></i>
+            <p class="font-outfit font-semibold text-gray-400">Cart is empty</p>
+          </div>
+        </div>
+        <div class="border-t border-white/10 pt-3">
+          <div class="flex gap-2 mb-3">
+            <input type="text" id="coupon-input" placeholder="Coupon Code" class="flex-1 border border-white/20 bg-black/40 text-white text-sm px-3 py-1.5 rounded focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium placeholder-gray-500">
+            <button onclick="applyCoupon()" class="bg-white/10 hover:bg-amber-600 text-white text-xs px-4 py-1.5 rounded font-semibold transition-all duration-150 border border-white/10">Apply</button>
+          </div>
+          <div class="space-y-1.5 text-sm text-gray-300 mb-4 glass-card p-3 rounded-lg">
+            <div class="flex justify-between"><span class="text-gray-400">Subtotal:</span><span id="calc-subtotal" class="font-semibold text-white">₹0.00</span></div>
+            <div class="flex justify-between text-green-400"><span>Discounts:</span><span class="font-semibold" id="calc-discounts">-₹0.00</span></div>
+            <div class="flex justify-between text-gray-400"><span>Tax:</span><span id="calc-tax" class="font-semibold text-white">₹0.00</span></div>
+            <hr class="border-dashed border-white/20 my-1">
+            <div class="flex justify-between text-amber-500 font-bold text-lg"><span>Total Due:</span><span id="calc-total">₹0.00</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="sendToKitchen()" class="bg-black/60 hover:bg-black text-amber-500 border border-amber-500/50 hover:border-amber-500 text-sm font-bold py-2.5 rounded shadow flex items-center justify-center gap-2 transition-all"><i class="fa-solid fa-kitchen-set"></i> Send to Kitchen</button>
+            <button onclick="openPaymentModal()" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-sm font-bold py-2.5 rounded shadow flex items-center justify-center gap-2 transition-all"><i class="fa-solid fa-credit-card"></i> Pay</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KITCHEN VIEW -->
+      <div id="view-kitchen" class="flex-1 flex flex-col p-4 overflow-hidden hidden bg-black/20">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold font-outfit text-white">Active Kitchen Tickets</h2>
+          <button onclick="fetchKitchenStatus()" class="text-amber-500 hover:text-amber-400 text-xs font-semibold"><i class="fa-solid fa-rotate-right mr-1"></i>Refresh</button>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scroll pr-1" id="kitchen-tickets-container">
+          <div class="text-center text-gray-500 mt-20"><i class="fa-solid fa-check-double text-4xl mb-3 text-white/20"></i><p>Loading...</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modals -->
+  <div id="session-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50">
+    <div class="glass-panel rounded-lg p-6 w-96 shadow-2xl border border-white/10">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+        <h3 class="font-outfit text-lg font-bold text-white"><i class="fa-solid fa-cash-register text-amber-500 mr-2"></i>POS Sessions Control</h3>
+        <button onclick="toggleSessionModal()" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="session-modal-content"></div>
+    </div>
+  </div>
+
+  <div id="table-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50">
+    <div class="glass-panel rounded-lg p-6 w-3/4 max-w-4xl shadow-2xl border border-white/10">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+        <h3 class="font-outfit text-lg font-bold text-white"><i class="fa-solid fa-chair text-amber-500 mr-2"></i>Select Table</h3>
+        <button onclick="closeTableSelector()" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="grid grid-cols-4 gap-4" id="table-grid"></div>
+    </div>
+  </div>
+
+  <div id="payment-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50">
+    <div class="glass-panel rounded-lg p-6 w-96 shadow-2xl flex flex-col border border-white/10">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-4">
+        <h3 class="font-outfit text-lg font-bold text-white"><i class="fa-solid fa-wallet text-amber-500 mr-2"></i>Payment Processing</h3>
+        <button onclick="closePaymentModal()" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="text-center mb-4">
+        <p class="text-xs text-gray-400 font-semibold tracking-wider mb-1">TOTAL PAYABLE</p>
+        <div class="bg-black/40 border border-white/10 rounded py-3 shadow-inner"><span class="text-3xl font-bold text-amber-500" id="payment-total-display">₹0.00</span></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button id="pm-Cash" onclick="selectPaymentMode('Cash')" class="border border-amber-500 bg-amber-500/10 text-amber-500 font-semibold p-3 rounded flex flex-col items-center transition-colors"><i class="fa-solid fa-money-bill-wave text-green-400 text-xl mb-1"></i>Cash</button>
+        <button id="pm-Card" onclick="selectPaymentMode('Digital/Card')" class="border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold p-3 rounded flex flex-col items-center transition-colors"><i class="fa-solid fa-credit-card text-blue-400 text-xl mb-1"></i>Card</button>
+        <button id="pm-UPI" onclick="selectPaymentMode('UPI QR')" class="border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold p-3 rounded flex flex-col items-center transition-colors"><i class="fa-solid fa-qrcode text-purple-400 text-xl mb-1"></i>UPI QR</button>
+      </div>
+      <div id="upi-container" class="hidden flex-col items-center justify-center bg-black/40 p-4 border border-white/10 rounded mb-4 text-center">
+        <p class="text-xs text-gray-400 font-semibold mb-2">Scan with GPay, PhonePe</p>
+        <div class="bg-white p-3 border-2 border-amber-500 rounded mb-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]"><img id="upi-qr-image" src="" alt="UPI QR Code" class="w-36 h-36"></div>
+        <p class="text-[10px] text-purple-400 font-mono" id="upi-payload-string">Loading...</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-auto">
+        <button onclick="closePaymentModal()" class="border border-white/20 text-gray-300 hover:bg-white/10 transition-colors py-2 rounded text-sm font-semibold">Cancel</button>
+        <button onclick="submitPayment()" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow py-2 rounded text-sm font-semibold transition-all">Complete Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-4 right-4 bg-charcoal text-oat px-4 py-3 rounded-lg shadow-xl translate-y-20 transition-all duration-300 z-50">
+    <span id="toast-message" class="text-sm"></span>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : ''; 
+    let loggedInUser = null;
+    let products = [];
+    let categories = [];
+    let cart = [];
+    let currentSession = null;
+    let selectedTable = null;
+    let currentOrderNumber = 1001;
+    let socket;
+    let paymentMode = 'Cash';
+    let currentCoupon = '';
+
+    function showToast(msg) {
+      document.getElementById('toast-message').innerText = msg;
+      const t = document.getElementById('toast');
+      t.style.transform = 'translateY(0)';
+      setTimeout(() => t.style.transform = 'translateY(150px)', 3000);
+    }
+
+    function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login.html'; }
+
+    async function initPOS() {
+      const token = localStorage.getItem('token');
+      if (!token) return logout();
+      loggedInUser = JSON.parse(localStorage.getItem('user'));
+      document.getElementById('user-name-display').innerText = loggedInUser.name;
+      document.getElementById('user-role-display').innerText = loggedInUser.role.split('/')[0];
+      
+      document.getElementById('order-number-display').innerText = `ORD-${currentOrderNumber}`;
+
+      try {
+        const [catRes, prodRes, sessRes] = await Promise.all([
+          fetch(`${API_BASE}/api/customer/menu`), // Reusing public menu to get products/cats easily if no specific admin route is available, else mock
+          fetch(`${API_BASE}/api/customer/menu`),
+          fetch(`${API_BASE}/api/pos/sessions/active`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        if (catRes.ok) {
+          const data = await catRes.json();
+          categories = data.categories || [];
+          products = data.products || [];
+        }
+        if (sessRes.ok) {
+          const sessData = await sessRes.json();
+          if (sessData.session) currentSession = sessData.session;
+        }
+      } catch (e) { console.error('API Error', e); }
+
+      renderCategories();
+      renderProducts();
+      updateSessionUI();
+      connectWebSocket();
+      fetchKitchenStatus();
+    }
+
+    function updateSessionUI() {
+      const info = document.getElementById('session-info');
+      if (currentSession) {
+        info.innerText = `Active (₹${currentSession.opening_balance.toFixed(2)})`;
+        info.className = "text-green-400 font-bold";
+      } else {
+        info.innerText = "Offline";
+        info.className = "text-red-400 font-bold";
+      }
+    }
+
+    function connectWebSocket() {
+      socket = new WebSocket(`ws://${window.location.host}`);
+      socket.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'ORDER_COMPLETED_KDS') showToast(`Order ${msg.payload.orderNumber} is Ready!`);
+          if (['KDS_NEW_TICKET', 'TICKET_STATUS_UPDATED', 'ORDER_COMPLETED_KDS'].includes(msg.type)) fetchKitchenStatus();
+        } catch (e) {}
+      };
+      socket.onclose = () => setTimeout(connectWebSocket, 5000);
+    }
+
+    // TABS
+    function switchRightTab(tab) {
+      if (tab === 'cart') {
+        document.getElementById('view-cart').classList.remove('hidden');
+        document.getElementById('view-kitchen').classList.add('hidden');
+        document.getElementById('tab-btn-cart').className = "flex-1 py-3 text-center font-bold text-espresso border-b-2 border-coffee transition-colors bg-white";
+        document.getElementById('tab-btn-kitchen').className = "flex-1 py-3 text-center font-bold text-gray-400 border-b-2 border-transparent hover:bg-gray-100 transition-colors relative";
+      } else {
+        document.getElementById('view-cart').classList.add('hidden');
+        document.getElementById('view-kitchen').classList.remove('hidden');
+        document.getElementById('tab-btn-kitchen').className = "flex-1 py-3 text-center font-bold text-espresso border-b-2 border-coffee transition-colors bg-white relative";
+        document.getElementById('tab-btn-cart').className = "flex-1 py-3 text-center font-bold text-gray-400 border-b-2 border-transparent hover:bg-gray-100 transition-colors";
+        fetchKitchenStatus();
+      }
+    }
+
+    // KITCHEN TRACKER
+    async function fetchKitchenStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/pos/kitchen-status`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+        if (res.ok) {
+          const tickets = await res.json();
+          const badge = document.getElementById('kitchen-badge');
+          if (badge) {
+            badge.innerText = tickets.length;
+            badge.className = tickets.length > 0 ? "absolute top-2 right-4 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full" : "hidden";
+          }
+          const container = document.getElementById('kitchen-tickets-container');
+          if (tickets.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-400 mt-20"><i class="fa-solid fa-mug-hot text-5xl mb-4 text-cappuccino"></i><p>Kitchen is all caught up!</p></div>`;
+            return;
+          }
+          container.innerHTML = '<div class="flex flex-col gap-4"></div>';
+          const grid = container.querySelector('div');
+          tickets.forEach(ticket => {
+            const allItems = ticket.items.length;
+            const ready = ticket.items.filter(i => i.kdsStatus === 'Cooked').length;
+            const prep = ticket.items.filter(i => i.kdsStatus === 'Preparing').length;
+            let badgeHtml = '', border = '';
+            if (ready === allItems) { badgeHtml = `<span class="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded border border-green-500/30">Cooked</span>`; border = 'border-green-500'; }
+            else if (prep > 0 || ready > 0) { badgeHtml = `<span class="bg-amber-500/20 text-amber-400 text-xs px-2 py-1 rounded border border-amber-500/30">Preparing...</span>`; border = 'border-amber-500'; }
+            else { badgeHtml = `<span class="bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded border border-red-500/30">Waiting</span>`; border = 'border-red-500'; }
+            
+            let itemsHtml = ticket.items.map(item => `
+              <div class="flex justify-between items-center text-sm py-1 border-b border-white/5 text-gray-300">
+                <span>${item.quantity}x ${item.name}</span>
+                <span class="text-xs">${item.kdsStatus === 'Cooked'?'<i class="fa-solid fa-check text-green-500"></i>':item.kdsStatus === 'Preparing'?'<i class="fa-solid fa-fire text-amber-500"></i>':'<i class="fa-solid fa-hourglass-start text-red-400"></i>'} <span class="text-gray-400">${item.kdsStatus}</span></span>
+              </div>
+            `).join('');
+
+            grid.innerHTML += `
+              <div class="glass-card rounded shadow-sm border-l-4 ${border} p-4 flex flex-col hover:bg-white/5 transition-colors">
+                <div class="flex justify-between mb-2"><div><h3 class="font-bold text-white">${ticket.orderNumber}</h3><p class="text-xs text-gray-400">${ticket.tableName}</p></div>${badgeHtml}</div>
+                <div class="flex-1">${itemsHtml}</div>
+                <div class="mt-2 text-xs text-center text-gray-500 border-t border-white/10 pt-2">${ready} of ${allItems} items cooked</div>
+              </div>`;
+          });
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // RENDERING
+    function renderCategories() {
+      const c = document.getElementById('categories-tabs');
+      c.innerHTML = `<button onclick="filterCategory(null)" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold border border-amber-500/50 bg-amber-600 text-white shadow-lg shadow-amber-900/20 transition-all">All Products</button>`;
+      categories.forEach(cat => {
+        c.innerHTML += `<button onclick="filterCategory(${cat.id})" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold border border-white/10 bg-black/40 text-gray-300 hover:bg-white/10 hover:text-white transition-all">${cat.name}</button>`;
+      });
+    }
+
+    function filterCategory(id) { renderProducts(id); }
+
+    function renderProducts(catId = null) {
+      const c = document.getElementById('products-grid');
+      c.innerHTML = '';
+      const list = catId ? products.filter(p => p.category_id === catId) : products;
+      if (list.length === 0) { c.innerHTML = '<p class="col-span-3 text-center py-10 text-gray-500">No items available.</p>'; return; }
+      list.forEach(p => {
+        const catName = categories.find(c => c.id === p.category_id)?.name || 'Misc';
+        c.innerHTML += `
+          <div onclick="addToCart(${p.id})" class="glass-card p-4 rounded-xl shadow-sm border-l-4 border-amber-500 cursor-pointer hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:scale-[1.02] hover:bg-white/10 transition-all flex flex-col justify-between h-32 relative">
+            <div><div class="flex justify-between items-start"><h3 class="font-bold text-gray-200 text-md leading-tight max-w-[70%]">${p.name}</h3><span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold">${catName}</span></div></div>
+            <div class="flex justify-between items-end mt-auto"><span class="text-xs text-gray-500">per item</span><span class="font-bold text-lg text-amber-500">₹${parseFloat(p.price).toFixed(2)}</span></div>
+          </div>`;
+      });
+    }
+
+    function addToCart(id) {
+      const p = products.find(x => x.id === id);
+      if (!p) return;
+      const ex = cart.find(x => x.id === id);
+      if (ex) ex.quantity++; else cart.push({ ...p, quantity: 1 });
+      renderCart();
+    }
+
+    function renderCart() {
+      const c = document.getElementById('cart-list');
+      if (cart.length === 0) {
+        c.innerHTML = `<div class="my-auto text-center text-gray-500 py-8"><i class="fa-solid fa-basket-shopping text-4xl mb-2 text-white/20"></i><p class="font-outfit font-semibold text-gray-400">Cart is empty</p></div>`;
+      } else {
+        c.innerHTML = cart.map((item, index) => `
+          <div class="glass-card p-2 rounded border border-white/10 flex flex-col gap-1 transition-colors hover:bg-white/5">
+            <div class="flex justify-between items-start"><span class="font-bold text-sm text-gray-200">${item.name}</span><span class="font-bold text-sm text-amber-500">₹${(item.price * item.quantity).toFixed(2)}</span></div>
+            <div class="flex justify-between items-center mt-1">
+              <div class="flex items-center gap-2 bg-black/40 border border-white/10 rounded px-1">
+                <button onclick="updateQty(${index}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white font-bold transition-colors">-</button>
+                <span class="text-xs font-bold w-4 text-center text-gray-200">${item.quantity}</span>
+                <button onclick="updateQty(${index}, 1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white font-bold transition-colors">+</button>
+              </div>
+              <button onclick="updateQty(${index}, -999)" class="text-red-400 hover:text-red-500 transition-colors text-xs"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>`).join('');
+      }
+      calculateTotals();
+    }
+
+    function updateQty(idx, change) {
+      cart[idx].quantity += change;
+      if (cart[idx].quantity <= 0) cart.splice(idx, 1);
+      renderCart();
+    }
+
+    function applyCoupon() {
+      currentCoupon = document.getElementById('coupon-input').value;
+      calculateTotals();
+    }
+
+    async function calculateTotals() {
+      if (cart.length === 0) {
+        document.getElementById('calc-subtotal').innerText = '₹0.00';
+        document.getElementById('calc-discounts').innerText = '-₹0.00';
+        document.getElementById('calc-tax').innerText = '₹0.00';
+        document.getElementById('calc-total').innerText = '₹0.00';
+        try {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'POS_CART_UPDATE',
+              payload: { items: [], subtotal: 0, discountAmount: 0, tax: 0, totalAmount: 0 }
+            }));
+          }
+        } catch(e) {}
+        return;
+      }
+      try {
+        const payload = { items: cart.map(i => ({ productId: i.id, quantity: i.quantity })), couponCode: currentCoupon };
+        const res = await fetch(`${API_BASE}/api/pos/orders/preview`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('calc-subtotal').innerText = `₹${data.subtotal.toFixed(2)}`;
+          document.getElementById('calc-discounts').innerText = `-₹${data.discountAmount.toFixed(2)}`;
+          document.getElementById('calc-tax').innerText = `₹${data.tax.toFixed(2)}`;
+          document.getElementById('calc-total').innerText = `₹${data.totalAmount.toFixed(2)}`;
+          document.getElementById('payment-total-display').innerText = `₹${data.totalAmount.toFixed(2)}`;
+          
+          try {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: 'POS_CART_UPDATE',
+                payload: {
+                  items: cart,
+                  subtotal: data.subtotal,
+                  discountAmount: data.discountAmount,
+                  tax: data.tax,
+                  totalAmount: data.totalAmount
+                }
+              }));
+            }
+          } catch(e) {}
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // MODALS & ACTIONS
+    function toggleSessionModal() {
+      const m = document.getElementById('session-modal');
+      m.classList.toggle('hidden');
+      if (!m.classList.contains('hidden')) {
+        const c = document.getElementById('session-modal-content');
+        if (currentSession) {
+          c.innerHTML = `
+            <div class="text-center mb-4"><i class="fa-solid fa-lock-open text-green-500 text-3xl mb-2"></i><p>Session Active</p></div>
+            <p class="text-sm mb-2"><strong>Opened:</strong> ${new Date(currentSession.opened_at).toLocaleTimeString()}</p>
+            <p class="text-sm mb-4"><strong>Opening Balance:</strong> ₹${parseFloat(currentSession.opening_balance).toFixed(2)}</p>
+            <button onclick="closeSession()" class="w-full bg-red-500 text-white py-2 rounded font-bold">Close Session</button>`;
+        } else {
+          c.innerHTML = `
+            <div class="mb-3"><label class="block text-sm font-semibold mb-1">Opening Cash Balance (₹)</label><input type="number" id="opening-balance" value="0.00" class="w-full border px-3 py-2 rounded"></div>
+            <button onclick="openSession()" class="w-full bg-green-500 text-white py-2 rounded font-bold">Start Session</button>`;
+        }
+      }
+    }
+
+    async function openSession() {
+      const b = document.getElementById('opening-balance').value;
+      const res = await fetch(`${API_BASE}/api/pos/sessions/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ opening_balance: parseFloat(b) })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentSession = data.session;
+        updateSessionUI();
+        toggleSessionModal();
+        showToast('Session opened.');
+      } else {
+        showToast('Failed to open session.');
+      }
+    }
+
+    async function closeSession() {
+      const res = await fetch(`${API_BASE}/api/pos/sessions/close`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ sessionId: currentSession.id, closing_balance: currentSession.opening_balance }) // simplified
+      });
+      if (res.ok) {
+        currentSession = null;
+        updateSessionUI();
+        toggleSessionModal();
+        showToast('Session closed.');
+      }
+    }
+
+    function openTableSelector() { document.getElementById('table-modal').classList.remove('hidden'); }
+    function closeTableSelector() { document.getElementById('table-modal').classList.add('hidden'); }
+
+    function openPaymentModal() {
+      if (!currentSession) return showToast('Open a session first!');
+      if (cart.length === 0) return showToast('Cart is empty!');
+      selectPaymentMode('Cash');
+      document.getElementById('payment-modal').classList.remove('hidden');
+    }
+    function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
+
+    function selectPaymentMode(mode) {
+      paymentMode = mode;
+      document.getElementById('pm-Cash').className = mode === 'Cash' ? 'border-2 border-coffee bg-cream text-espresso font-semibold p-3 rounded flex flex-col items-center' : 'border-2 border-gray-200 bg-white text-espresso font-semibold p-3 rounded flex flex-col items-center';
+      document.getElementById('pm-Card').className = mode === 'Digital/Card' ? 'border-2 border-coffee bg-cream text-espresso font-semibold p-3 rounded flex flex-col items-center' : 'border-2 border-gray-200 bg-white text-espresso font-semibold p-3 rounded flex flex-col items-center';
+      document.getElementById('pm-UPI').className = mode === 'UPI QR' ? 'border-2 border-coffee bg-cream text-espresso font-semibold p-3 rounded flex flex-col items-center' : 'border-2 border-gray-200 bg-white text-espresso font-semibold p-3 rounded flex flex-col items-center';
+      
+      const upi = document.getElementById('upi-container');
+      if (mode === 'UPI QR') {
+        const raw = document.getElementById('payment-total-display').innerText.replace(/[^0-9.]/g, '');
+        const uri = `upi://pay?pa=abhia28287@okhdfcbank&am=${raw}&tn=CafeOrbit`;
+        document.getElementById('upi-payload-string').innerText = 'ID: abhia28287@okhdfcbank';
+        document.getElementById('upi-qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(uri)}`;
+        upi.classList.remove('hidden');
+        upi.classList.add('flex');
+      } else {
+        upi.classList.add('hidden');
+        upi.classList.remove('flex');
+      }
+
+      try {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'POS_PAYMENT_INITIATED',
+            payload: {
+              mode: mode,
+              totalAmount: document.getElementById('payment-total-display').innerText.replace(/[^0-9.]/g, '')
+            }
+          }));
+        }
+      } catch(e) {}
+    }
+
+    async function submitPayment() {
+      showToast(`Payment of ${document.getElementById('payment-total-display').innerText} processed via ${paymentMode}!`);
+      cart = [];
+      currentCoupon = '';
+      document.getElementById('coupon-input').value = '';
+      closePaymentModal();
+      renderCart();
+      currentOrderNumber++;
+      document.getElementById('order-number-display').innerText = `ORD-${currentOrderNumber}`;
+
+      try {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'POS_PAYMENT_COMPLETED',
+            payload: { orderNumber: `ORD-${currentOrderNumber - 1}` }
+          }));
+        }
+      } catch(e) {}
+    }
+
+    async function sendToKitchen() {
+      if (!currentSession) return showToast('Open a session first!');
+      if (cart.length === 0) return showToast('Cart is empty!');
+      try {
+        const payload = { sessionId: currentSession.id, items: cart.map(i => ({ productId: i.id, quantity: i.quantity })), couponCode: currentCoupon };
+        const res = await fetch(`${API_BASE}/api/pos/orders`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          await fetch(`${API_BASE}/api/pos/orders/${data.order.id}/send-to-kitchen`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }});
+          showToast('Sent to kitchen successfully!');
+          cart = [];
+          currentCoupon = '';
+          document.getElementById('coupon-input').value = '';
+          renderCart();
+          currentOrderNumber++;
+          document.getElementById('order-number-display').innerText = `ORD-${currentOrderNumber}`;
+          switchRightTab('kitchen');
+        }
+      } catch (e) { showToast('Error sending to kitchen.'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', initPOS);
+  </script>
+</body>
+</html>

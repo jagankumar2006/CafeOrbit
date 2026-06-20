@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CafeOrbit - Command Center</title>
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts Outfit & Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Slate Minimalist & Tech Steel custom theme overrides */
+    body {
+      background-color: #F1F5F9; /* Steel Light Slate */
+      font-family: 'Inter', sans-serif;
+      color: #334155;
+    }
+
+    .navbar-admin {
+      background: linear-gradient(135deg, #241407 0%, #4a3311 100%); /* Golden Mixed Brown */
+      border-bottom: 3px solid #D4AF37; /* Premium Gold Border */
+      padding: 0.75rem 1.5rem;
+    }
+
+    .sidebar-card {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+    }
+
+    .nav-tabs .nav-link {
+      color: #64748B;
+      font-weight: 500;
+      border: none;
+      padding: 0.75rem 1.25rem;
+    }
+
+    .nav-tabs .nav-link.active {
+      color: #0F172A;
+      font-weight: 600;
+      border-bottom: 3px solid #475569;
+      background: transparent;
+    }
+
+    .kpi-card {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-left: 5px solid #475569; /* Slate Left Accent */
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .kpi-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748B;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .kpi-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    /* Asynchronous Inline Category Modal positioned directly above category select input box */
+    .inline-category-overlay {
+      position: absolute;
+      top: -150px;
+      left: 0;
+      right: 0;
+      background: #FFFFFF;
+      border: 2px solid #64748B;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      z-index: 1050;
+      display: none;
+    }
+
+    .branding-text {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1.1;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const token = localStorage.getItem('cafeorbit_token');
+    const userStr = localStorage.getItem('cafeorbit_user');
+    if (!token || !userStr) {
+      window.location.replace('/login.html');
+    }
+    const loggedInUser = JSON.parse(userStr);
+    
+    // Role Check: If Employee, redirect to POS
+    if (loggedInUser.role !== 'User/Admin') {
+      window.location.replace('/pos.html');
+    }
+
+    function logout() {
+      localStorage.removeItem('cafeorbit_token');
+      localStorage.removeItem('cafeorbit_user');
+      window.location.replace('/login.html');
+    }
+  </script>
+  <!-- Admin Command Navbar -->
+  <nav class="navbar navbar-admin navbar-dark">
+    <div class="container-fluid">
+      <div class="d-flex align-items-center">
+        <div class="bg-secondary p-2 rounded-3 me-3 text-white">
+          <i class="fa-solid fa-sliders fa-lg"></i>
+        </div>
+        <div>
+          <span class="navbar-brand mb-0 h1 font-outfit text-white fw-bold tracking-wide" style="font-family: 'Outfit', sans-serif;">COMMAND CENTER</span>
+          <span class="badge bg-secondary text-white" style="font-size: 10px;">v1.2.0</span>
+        </div>
+      </div>
+
+      <!-- CafeOrbit Logo Locked to Top-Right Corner & User Info -->
+      <div class="d-flex align-items-center gap-3">
+        <div class="text-end text-white border-end border-secondary pe-3 me-1 d-none d-md-block">
+          <p class="mb-0 fw-bold fs-6"><script>document.write(loggedInUser.name)</script></p>
+          <p class="text-secondary mb-0" style="font-size: 10px; text-transform: uppercase;"><script>document.write(loggedInUser.role)</script></p>
+        </div>
+        <button onclick="logout()" class="btn btn-sm btn-outline-danger me-2" title="Sign Out">
+          <i class="fa-solid fa-power-off"></i>
+        </button>
+        <div class="text-end text-white d-none d-sm-block">
+          <p class="branding-text mb-0 fs-3 fw-bold">CafeOrbit</p>
+          <p class="text-secondary mb-0" style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase;">Management</p>
+        </div>
+        <img src="/logo.png" alt="CafeOrbit Logo" style="height: 65px; width: auto; object-fit: contain;">
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content Container -->
+  <div class="container-fluid py-4">
+    <!-- Tabs Header -->
+    <ul class="nav nav-tabs mb-4 border-bottom" id="adminTabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products-content" type="button" role="tab"><i class="fa-solid fa-bowl-food me-2"></i>Product Catalog</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports-content" type="button" role="tab" onclick="loadCharts()"><i class="fa-solid fa-chart-line me-2"></i>Analytical Reports</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="tables-tab" data-bs-toggle="tab" data-bs-target="#tables-content" type="button" role="tab"><i class="fa-solid fa-chair me-2"></i>Tables & QR</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-content" type="button" role="tab" onclick="loadOrderHistory()"><i class="fa-solid fa-clock-rotate-left me-2"></i>Order History</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="employees-tab" data-bs-toggle="tab" data-bs-target="#employees-content" type="button" role="tab" onclick="loadEmployees()"><i class="fa-solid fa-users me-2"></i>Staff & Employees</button>
+      </li>
+    </ul>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="adminTabsContent">
+
+      <!-- 1. PRODUCT CATALOG TAB -->
+      <div class="tab-pane fade show active" id="products-content" role="tabpanel">
+        <div class="row">
+          <!-- Left: Product Form -->
+          <div class="col-md-4">
+            <div class="card shadow-sm border-0 sidebar-card p-4 position-relative">
+              <h4 class="font-outfit fw-bold text-dark mb-3" id="form-title">Create New Product</h4>
+              <hr class="mt-0 border-secondary-subtle">
+
+              <!-- Form body -->
+              <form id="product-form" onsubmit="saveProduct(event)">
+                <input type="hidden" id="product-id">
+
+                <div class="mb-3">
+                  <label class="form-label text-secondary fw-semibold small">Product Name</label>
+                  <input type="text" id="prod-name" placeholder="e.g. Mocha Fudge Brownie" class="form-control" required>
+                </div>
+
+                <!-- Category input container with inline overlay -->
+                <div class="mb-3 position-relative">
+                  <label class="form-label text-secondary fw-semibold small d-flex justify-content-between">
+                    <span>Category</span>
+                    <a href="javascript:void(0)" onclick="toggleInlineCategory(true)" class="text-decoration-none text-primary small"><i class="fa-solid fa-plus-circle me-1"></i>New Category</a>
+                  </label>
+                  
+                  <select id="prod-category" class="form-select" required>
+                    <!-- Populated by JS -->
+                  </select>
+
+                  <!-- Inline Category Creation Modal directly over category selector -->
+                  <div id="inline-cat-overlay" class="inline-category-overlay">
+                    <h6 class="font-outfit fw-bold text-dark mb-2">Create New Category</h6>
+                    <div class="mb-2">
+                      <input type="text" id="new-cat-name" placeholder="Category Name" class="form-control form-control-sm mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <label class="small text-secondary shrink-0">Color Picker</label>
+                        <input type="color" id="new-cat-color" value="#6F4E37" class="form-control form-control-color form-control-sm border-0" style="width: 50px;">
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                      <button type="button" onclick="toggleInlineCategory(false)" class="btn btn-xs btn-outline-secondary btn-sm">Cancel</button>
+                      <button type="button" onclick="submitInlineCategory()" class="btn btn-xs btn-primary btn-sm">Add Category</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label text-secondary fw-semibold small">Price ($)</label>
+                    <input type="number" step="0.01" id="prod-price" value="5.00" class="form-control" required>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label text-secondary fw-semibold small">Tax (%)</label>
+                    <input type="number" id="prod-tax" value="18" class="form-control" required>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label text-secondary fw-semibold small">Description</label>
+                  <textarea id="prod-description" placeholder="Short description..." class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label text-secondary fw-semibold small">Product Image (Base64 S3 upload)</label>
+                  <input type="file" id="prod-image-file" class="form-control" accept="image/*">
+                </div>
+
+                <div class="d-flex gap-2 pt-2">
+                  <button type="button" onclick="resetForm()" class="btn btn-outline-secondary w-50">Reset</button>
+                  <button type="submit" class="btn btn-dark w-50">Save Item</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Right: Products Catalog Listing -->
+          <div class="col-md-8">
+            <div class="card shadow-sm border-0 p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="font-outfit fw-bold text-dark">Active Menu Items</h4>
+                <span class="badge bg-dark" id="product-count">0 Items</span>
+              </div>
+              
+              <div class="table-responsive">
+                <table class="table align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Image</th>
+                      <th>Product Info</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                      <th>Tax</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="products-table-body">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ANALYTICAL REPORTS TAB -->
+      <div class="tab-pane fade" id="reports-content" role="tabpanel">
+        <!-- KPI Row -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="kpi-card">
+              <div class="kpi-title">Total Orders</div>
+              <div class="kpi-value" id="kpi-orders">382</div>
+              <div class="small text-success mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+12.5% this week</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card" style="border-left-color: #3B82F6;">
+              <div class="kpi-title">Gross Revenue</div>
+              <div class="kpi-value" id="kpi-revenue">$2,485.50</div>
+              <div class="small text-success mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+8.3% this week</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card" style="border-left-color: #10B981;">
+              <div class="kpi-title">Average Order Value (AOV)</div>
+              <div class="kpi-value" id="kpi-aov">$16.50</div>
+              <div class="small text-secondary mt-1">Stable vs last week</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Workspace -->
+        <div class="row mb-4">
+          <!-- Sales Curve Line Chart -->
+          <div class="col-md-8 mb-3">
+            <div class="card shadow-sm border-0 p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3"><i class="fa-solid fa-arrow-trend-up text-secondary me-2"></i>Sales Curve Timeline</h5>
+              <div style="height: 300px; width: 100%;">
+                <canvas id="salesTimelineChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- Categorical Shares -->
+          <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-0 p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3"><i class="fa-solid fa-chart-pie text-secondary me-2"></i>Categorical Weights</h5>
+              <div style="height: 300px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                <canvas id="categoryPieChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Center -->
+        <div class="card shadow-sm border-0 p-4 bg-white">
+          <h5 class="font-outfit fw-bold text-dark mb-3"><i class="fa-solid fa-cloud-arrow-down text-secondary me-2"></i>Enterprise Export Engine</h5>
+          <p class="small text-secondary">Export structured restaurant sales curves and metrics in tabular CSV format for Excel, or print-ready PDF format. Files are saved locally and available for immediate download.</p>
+          <div class="d-flex gap-3 mt-3">
+            <button onclick="triggerExport('csv')" class="btn btn-outline-dark"><i class="fa-solid fa-file-csv me-2 text-success"></i>Export to CSV Spreadsheet</button>
+            <button onclick="triggerExport('pdf')" class="btn btn-outline-dark"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>Export to PDF Layout</button>
+          </div>
+          <div id="export-link-container" class="mt-3 alert alert-success d-none">
+            <!-- Dynamic local download link -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDER HISTORY TAB -->
+      <div class="tab-pane fade" id="history-content" role="tabpanel">
+        <div class="card shadow-sm border-0 p-4">
+          <h4 class="font-outfit fw-bold text-dark mb-4">Complete Order History</h4>
+          <div class="table-responsive">
+            <table class="table align-middle table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Order No.</th>
+                  <th>Table / Type</th>
+                  <th>Total Paid</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. TABLES & FLOOR PLANS TAB -->
+      <div class="tab-pane fade" id="tables-content" role="tabpanel">
+        <div class="row">
+          <!-- Floors Form -->
+          <div class="col-md-5">
+            <div class="card shadow-sm border-0 p-4 mb-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3">Create Dining Floor Plan</h5>
+              <div class="mb-3">
+                <input type="text" id="floor-name" placeholder="e.g. Rooftop Terrace" class="form-control mb-2">
+                <button onclick="addFloor()" class="btn btn-secondary w-100 btn-sm">Add Floor Plan</button>
+              </div>
+              <ul class="list-group list-group-flush" id="floors-list">
+                <!-- JS populated floors -->
+              </ul>
+            </div>
+
+            <!-- Table Form -->
+            <div class="card shadow-sm border-0 p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3">Create Table Layout</h5>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">Floor Plan</label>
+                <select id="table-floor-select" class="form-select form-select-sm mb-2">
+                  <!-- JS populated selection -->
+                </select>
+                <input type="text" id="table-number" placeholder="Table Number (e.g. T-12)" class="form-control form-control-sm mb-2">
+                <input type="number" id="table-seats" placeholder="Seats (e.g. 4)" class="form-control form-control-sm mb-2" value="4">
+                <button onclick="addTable()" class="btn btn-dark w-100 btn-sm mt-2">Generate Table Link</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tables Grid and PDF links -->
+          <div class="col-md-7">
+            <div class="card shadow-sm border-0 p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3">Active Dining Layouts & QR Links</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Floor</th>
+                      <th>Table</th>
+                      <th>Seats</th>
+                      <th>QR Code</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tables-table-body">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
+      <!-- 4. EMPLOYEES TAB -->
+      <div class="tab-pane fade" id="employees-content" role="tabpanel">
+        <div class="row">
+          <!-- Add Employee Form -->
+          <div class="col-md-4">
+            <div class="card shadow-sm border-0 sidebar-card p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3">Add New Employee</h5>
+              <form id="employee-form" onsubmit="addEmployee(event)">
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Full Name</label>
+                  <input type="text" id="emp-name" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Email Address</label>
+                  <input type="email" id="emp-email" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Password</label>
+                  <input type="password" id="emp-password" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Role</label>
+                  <select id="emp-role" class="form-select form-select-sm">
+                    <option value="Employee/Cashier">Employee/Cashier</option>
+                    <option value="User/Admin">Admin</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-dark w-100 btn-sm">Create Account</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Employee List -->
+          <div class="col-md-8">
+            <div class="card shadow-sm border-0 p-4">
+              <h5 class="font-outfit fw-bold text-dark mb-3">Registered Staff Accounts</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employees-table-body">
+                    <!-- JS populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Backend API host — always localhost for local hosting
+    const API_BASE = 'http://localhost:5000';
+
+    // In-memory data mirroring
+    let categories = [
+      { id: 1, name: 'Espresso Coffee', color: '#6F4E37' },
+      { id: 2, name: 'Soft Drinks', color: '#3B82F6' },
+      { id: 3, name: 'Bakery & Pastry', color: '#F59E0B' },
+      { id: 4, name: 'Pizzas', color: '#EF4444' },
+      { id: 5, name: 'Desserts', color: '#EC4899' }
+    ];
+
+    let products = [
+      { id: 1, name: 'Filter Coffee', category_id: 1, price: 150.00, unit_of_measure: 'cup', tax_percentage: 10.00, description: 'Authentic South Indian strong filter coffee.', image_url: '' },
+      { id: 2, name: 'Cutting Chai', category_id: 1, price: 50.00, unit_of_measure: 'glass', tax_percentage: 10.00, description: 'Classic Mumbai style strong cutting chai.', image_url: '' },
+      { id: 3, name: 'Masala Chai', category_id: 1, price: 80.00, unit_of_measure: 'cup', tax_percentage: 10.00, description: 'Spiced tea brewed with ginger, cardamom, and fresh milk.', image_url: '' },
+      { id: 4, name: 'Thums Up', category_id: 2, price: 60.00, unit_of_measure: 'bottle', tax_percentage: 12.00, description: 'Taste the thunder! Strong carbonated cola.', image_url: '' },
+      { id: 5, name: 'Fresh Nimbu Pani', category_id: 2, price: 90.00, unit_of_measure: 'glass', tax_percentage: 12.00, description: 'Freshly squeezed lemonade with sparkling water, mint, and masala.', image_url: '' },
+      { id: 6, name: 'Bun Maska', category_id: 3, price: 120.00, unit_of_measure: 'pcs', tax_percentage: 5.00, description: 'Soft bun slathered with generous amounts of butter.', image_url: '' },
+      { id: 7, name: 'Punjabi Samosa', category_id: 3, price: 40.00, unit_of_measure: 'pcs', tax_percentage: 5.00, description: 'Crispy pastry stuffed with spiced potatoes and peas.', image_url: '' },
+      { id: 8, name: 'Paneer Tikka Pizza', category_id: 4, price: 350.00, unit_of_measure: 'pcs', tax_percentage: 18.00, description: 'Loaded with spicy paneer tikka, onions, and capsicum.', image_url: '' },
+      { id: 9, name: 'Chicken Tikka Pizza', category_id: 4, price: 450.00, unit_of_measure: 'pcs', tax_percentage: 18.00, description: 'Loaded with roasted chicken tikka chunks and extra cheese.', image_url: '' },
+      { id: 10, name: 'Gulab Jamun', category_id: 5, price: 150.00, unit_of_measure: 'pcs', tax_percentage: 10.00, description: 'Classic Indian dessert - fried dough balls soaked in sweet syrup.', image_url: '' }
+    ];
+
+    let floors = [
+      { id: 1, name: 'Ground Floor' },
+      { id: 2, name: 'First Floor' },
+      { id: 3, name: 'Rooftop Garden' }
+    ];
+
+    let tables = [
+      { id: 1, floor_id: 1, table_number: 'T-01', seats_count: 2, qr_url: '' },
+      { id: 2, floor_id: 1, table_number: 'T-02', seats_count: 4, qr_url: '' },
+      { id: 3, floor_id: 1, table_number: 'T-03', seats_count: 4, qr_url: '' },
+      { id: 4, floor_id: 2, table_number: 'T-04', seats_count: 2, qr_url: '' },
+      { id: 5, floor_id: 2, table_number: 'T-05', seats_count: 6, qr_url: '' }
+    ];
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCategoriesDropdown();
+      renderProductsTable();
+      renderFloors();
+      renderTablesTable();
+    });
+
+    // Toggle inline new category form overlays over dropdown inputs
+    function toggleInlineCategory(show) {
+      const overlay = document.getElementById('inline-cat-overlay');
+      overlay.style.display = show ? 'block' : 'none';
+      if (show) {
+        document.getElementById('new-cat-name').focus();
+      }
+    }
+
+    function submitInlineCategory() {
+      const name = document.getElementById('new-cat-name').value.trim();
+      const color = document.getElementById('new-cat-color').value;
+
+      if (!name) return alert('Category Name is required.');
+
+      const nextId = categories.length + 1;
+      categories.push({ id: nextId, name, color });
+
+      // Clean inputs
+      document.getElementById('new-cat-name').value = '';
+      toggleInlineCategory(false);
+
+      // Re-populate and select this new item
+      renderCategoriesDropdown();
+      document.getElementById('prod-category').value = nextId;
+    }
+
+    function renderCategoriesDropdown() {
+      const select = document.getElementById('prod-category');
+      select.innerHTML = '';
+      categories.forEach(cat => {
+        select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+      });
+
+      // Update tables dropdown too
+      const tblSelect = document.getElementById('table-floor-select');
+      tblSelect.innerHTML = '';
+      floors.forEach(f => {
+        tblSelect.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+      });
+    }
+
+    // Products table logic
+    function renderProductsTable() {
+      const tbody = document.getElementById('products-table-body');
+      tbody.innerHTML = '';
+
+      products.forEach(p => {
+        const cat = categories.find(c => c.id === p.category_id) || { name: 'Unknown', color: '#666' };
+        const imageHtml = p.image_url 
+          ? `<img src="${p.image_url}" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">`
+          : `<div class="bg-light text-secondary d-flex align-items-center justify-content-center border rounded" style="width: 40px; height: 40px;"><i class="fa-solid fa-image"></i></div>`;
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${imageHtml}</td>
+            <td>
+              <div class="fw-bold text-dark">${p.name}</div>
+              <div class="text-muted small">${p.description || 'No description'}</div>
+            </td>
+            <td>
+              <span class="badge" style="background-color: ${cat.color}20; color: ${cat.color}; border: 1px solid ${cat.color}">${cat.name}</span>
+            </td>
+            <td class="fw-semibold text-dark">₹${p.price.toFixed(2)}</td>
+            <td class="text-secondary">${p.tax_percentage}%</td>
+            <td class="text-end">
+              <button onclick="editProduct(${p.id})" class="btn btn-sm btn-outline-secondary me-1"><i class="fa-solid fa-pencil"></i></button>
+              <button onclick="deleteProduct(${p.id})" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+      document.getElementById('product-count').innerText = `${products.length} Items`;
+    }
+
+    function saveProduct(event) {
+      event.preventDefault();
+      
+      const id = document.getElementById('product-id').value;
+      const name = document.getElementById('prod-name').value.trim();
+      const category_id = parseInt(document.getElementById('prod-category').value);
+      const price = parseFloat(document.getElementById('prod-price').value) || 0;
+      const tax_percentage = parseFloat(document.getElementById('prod-tax').value) || 0;
+      const description = document.getElementById('prod-description').value.trim();
+      const fileInput = document.getElementById('prod-image-file');
+
+      const finishSave = (base64Img) => {
+        if (id) {
+          // Edit mode
+          const p = products.find(prod => prod.id === parseInt(id));
+          if (p) {
+            p.name = name;
+            p.category_id = category_id;
+            p.price = price;
+            p.tax_percentage = tax_percentage;
+            p.description = description;
+            if (base64Img) p.image_url = base64Img;
+          }
+        } else {
+          // Create mode
+          const nextId = products.length > 0 ? Math.max(...products.map(x=>x.id)) + 1 : 1;
+          products.push({
+            id: nextId,
+            name,
+            category_id,
+            price,
+            unit_of_measure: 'pcs',
+            tax_percentage,
+            description,
+            image_url: base64Img || null
+          });
+        }
+        resetForm();
+        renderProductsTable();
+      };
+
+      if (fileInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onloadend = () => finishSave(reader.result);
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        finishSave(null);
+      }
+    }
+
+    function editProduct(id) {
+      const p = products.find(prod => prod.id === id);
+      if (!p) return;
+
+      document.getElementById('product-id').value = p.id;
+      document.getElementById('prod-name').value = p.name;
+      document.getElementById('prod-category').value = p.category_id;
+      document.getElementById('prod-price').value = p.price;
+      document.getElementById('prod-tax').value = p.tax_percentage;
+      document.getElementById('prod-description').value = p.description || '';
+      document.getElementById('form-title').innerText = 'Edit Product Catalog';
+    }
+
+    function deleteProduct(id) {
+      if (confirm('Are you sure you want to delete this product?')) {
+        products = products.filter(p => p.id !== id);
+        renderProductsTable();
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('product-form').reset();
+      document.getElementById('product-id').value = '';
+      document.getElementById('form-title').innerText = 'Create New Product';
+    }
+
+    // Floors and tables logic
+    function renderFloors() {
+      const list = document.getElementById('floors-list');
+      list.innerHTML = '';
+      floors.forEach(f => {
+        list.innerHTML += `
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent py-2">
+            <span><i class="fa-solid fa-layer-group text-secondary me-2"></i>${f.name}</span>
+            <button onclick="deleteFloor(${f.id})" class="btn btn-link text-danger p-0"><i class="fa-solid fa-trash-can"></i></button>
+          </li>
+        `;
+      });
+      renderCategoriesDropdown();
+    }
+
+    function addFloor() {
+      const name = document.getElementById('floor-name').value.trim();
+      if (!name) return;
+      floors.push({ id: floors.length + 1, name });
+      document.getElementById('floor-name').value = '';
+      renderFloors();
+    }
+
+    function deleteFloor(id) {
+      floors = floors.filter(f => f.id !== id);
+      renderFloors();
+    }
+
+    function renderTablesTable() {
+      const tbody = document.getElementById('tables-table-body');
+      tbody.innerHTML = '';
+
+      tables.forEach(t => {
+        const floor = floors.find(f => f.id === t.floor_id) || { name: 'Unknown' };
+        const qrCell = t.qr_url
+          ? `<button onclick="viewQR(${t.id})" class="btn btn-sm btn-success">
+               <i class="fa-solid fa-qrcode me-1"></i>View QR
+             </button>`
+          : `<button onclick="generateQR(${t.id})" class="btn btn-sm btn-outline-secondary">
+               <i class="fa-solid fa-qrcode me-1"></i>Generate QR
+             </button>`;
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${floor.name}</td>
+            <td class="fw-bold">${t.table_number}</td>
+            <td>${t.seats_count} Seats</td>
+            <td>${qrCell}</td>
+            <td class="text-end">
+              <button onclick="deleteTable(${t.id})" class="btn btn-sm btn-link text-danger"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function addTable() {
+      const floor_id = parseInt(document.getElementById('table-floor-select').value);
+      const number = document.getElementById('table-number').value.trim();
+      const seats = parseInt(document.getElementById('table-seats').value) || 2;
+
+      if (!number) return;
+      tables.push({
+        id: tables.length + 1,
+        floor_id,
+        table_number: number,
+        seats_count: seats,
+        qr_url: ''
+      });
+
+      document.getElementById('table-number').value = '';
+      renderTablesTable();
+    }
+
+    function deleteTable(id) {
+      tables = tables.filter(t => t.id !== id);
+      renderTablesTable();
+    }
+
+    // Get stored auth token
+    function getToken() {
+      return localStorage.getItem('cafeorbit_token') || '';
+    }
+
+    // Generate a real QR code PNG via the backend API
+    async function generateQR(tableId) {
+      const btn = document.querySelector(`button[onclick="generateQR(${tableId})"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generating...'; }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/tables/${tableId}/generate-qr`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+
+        // Update in-memory table record
+        const t = tables.find(tbl => tbl.id === tableId);
+        if (t) t.qr_url = API_BASE + data.qrImageUrl;
+
+        renderTablesTable();
+        showQRModal(tableId, data);
+      } catch (err) {
+        alert('QR generation failed: ' + err.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-qrcode me-1"></i>Generate QR'; }
+      }
+    }
+
+    // View an already-generated QR code
+    function viewQR(tableId) {
+      const t = tables.find(tbl => tbl.id === tableId);
+      if (!t || !t.qr_url) return;
+      const floor = floors.find(f => f.id === t.floor_id) || { name: '' };
+      showQRModal(tableId, {
+        tableName: t.table_number,
+        floorName: floor.name,
+        qrImageUrl: t.qr_url.replace(API_BASE, ''),
+        qrContent: `${API_BASE}/customer.html?table_id=${tableId}&table=${encodeURIComponent(t.table_number)}`
+      });
+    }
+
+    // Show QR preview modal
+    function showQRModal(tableId, data) {
+      document.getElementById('qr-modal-title').innerText  = `Table ${data.tableName} — ${data.floorName}`;
+      document.getElementById('qr-modal-img').src          = API_BASE + data.qrImageUrl + '?v=' + Date.now();
+      document.getElementById('qr-modal-link').innerText   = data.qrContent;
+      document.getElementById('qr-modal-download').href    = API_BASE + data.qrImageUrl;
+      document.getElementById('qr-modal-download').download = `QR_Table_${data.tableName}.png`;
+      document.getElementById('qr-regen-btn').onclick      = () => generateQR(tableId);
+      const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+      modal.show();
+    }
+
+    // Chart.js Analytical workspace loaders
+    let lineChart = null;
+    let pieChart = null;
+
+    async function loadCharts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/reports/analytics`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        // Update KPIs
+        document.getElementById('kpi-orders').innerText = data.kpis.totalOrders;
+        document.getElementById('kpi-revenue').innerText = `₹${data.kpis.totalRevenue.toFixed(2)}`;
+        document.getElementById('kpi-aov').innerText = `₹${data.kpis.averageOrderValue.toFixed(2)}`;
+
+        // Render Charts with small timeout
+        setTimeout(() => {
+          const ctxTimeline = document.getElementById('salesTimelineChart').getContext('2d');
+          const ctxPie = document.getElementById('categoryPieChart').getContext('2d');
+
+          if (lineChart) lineChart.destroy();
+          if (pieChart) pieChart.destroy();
+
+          lineChart = new Chart(ctxTimeline, {
+            type: 'line',
+            data: {
+              labels: data.timelineSales.map(t => new Date(t.order_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})),
+              datasets: [{
+                label: 'Daily Sales (₹)',
+                data: data.timelineSales.map(t => t.revenue),
+                borderColor: '#475569',
+                backgroundColor: '#47556920',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+
+          // Plot all categories, even those with 0 sales, to show the full ratio of product types
+          pieChart = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+              labels: data.categorySales.map(c => c.category_name),
+              datasets: [{
+                data: data.categorySales.map(c => parseFloat(c.category_revenue)),
+                backgroundColor: data.categorySales.map(c => c.category_color),
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        }, 150);
+      } catch (err) {
+        console.error('Failed to load analytics', err);
+      }
+    }
+
+    async function loadOrderHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/reports/history`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        const tbody = document.getElementById('history-table-body');
+        tbody.innerHTML = '';
+        data.orders.forEach(o => {
+          let badgeColor = 'secondary';
+          if (o.status === 'Paid') badgeColor = 'success';
+          if (o.status === 'Cancelled') badgeColor = 'danger';
+          if (o.status === 'Draft') badgeColor = 'warning text-dark';
+          if (o.status === 'Completed') badgeColor = 'info';
+          if (o.status === 'Kitchen') badgeColor = 'info';
+
+          tbody.innerHTML += `
+            <tr>
+              <td><span class="text-secondary small fw-medium">${new Date(o.created_at).toLocaleString()}</span></td>
+              <td><span class="fw-bold">${o.order_number}</span></td>
+              <td><span class="badge bg-light text-dark border">${o.table_number ? 'Table ' + o.table_number : 'Takeaway'}</span></td>
+              <td class="fw-bold">₹${parseFloat(o.total_amount).toFixed(2)}</td>
+              <td><span class="badge bg-${badgeColor}">${o.status}</span></td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error('Failed to load history', err);
+      }
+    }
+
+    // --- EMPLOYEE MANAGEMENT LOGIC ---
+    async function loadEmployees() {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/employees`, {
+          headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const employees = await res.json();
+        const tbody = document.getElementById('employees-table-body');
+        tbody.innerHTML = '';
+        
+        employees.forEach(emp => {
+          const badgeClass = emp.status === 'Active' ? 'success' : 'secondary';
+          tbody.innerHTML += `
+            <tr>
+              <td class="fw-bold">${emp.name}</td>
+              <td class="text-secondary">${emp.email}</td>
+              <td><span class="badge bg-dark">${emp.role}</span></td>
+              <td><span class="badge bg-${badgeClass}">${emp.status}</span></td>
+              <td class="text-end">
+                <button onclick="openPasswordModal(${emp.id})" class="btn btn-sm btn-outline-secondary me-1" title="Change Password"><i class="fa-solid fa-key"></i></button>
+                <button onclick="archiveEmployeeUI(${emp.id})" class="btn btn-sm btn-outline-warning me-1" title="Archive User" ${emp.status==='Archived'?'disabled':''}><i class="fa-solid fa-box-archive"></i></button>
+                <button onclick="deleteEmployeeUI(${emp.id})" class="btn btn-sm btn-outline-danger" title="Delete User"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        });
+      } catch(err) {
+        console.error('Failed to load employees:', err);
+      }
+    }
+
+    async function addEmployee(e) {
+      e.preventDefault();
+      const name = document.getElementById('emp-name').value;
+      const email = document.getElementById('emp-email').value;
+      const password = document.getElementById('emp-password').value;
+      const role = document.getElementById('emp-role').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password, role })
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+        alert('Employee created successfully!');
+        document.getElementById('employee-form').reset();
+        loadEmployees();
+      } catch(err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function archiveEmployeeUI(id) {
+      if(!confirm('Are you sure you want to archive this employee? They will not be able to log in.')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/employees/${id}/archive`, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if(!res.ok) throw new Error('Failed to archive');
+        loadEmployees();
+      } catch(err) { alert(err.message); }
+    }
+
+    async function deleteEmployeeUI(id) {
+      if(!confirm('Are you sure you want to delete this employee? This will hide them from the system.')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/employees/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if(!res.ok) throw new Error('Failed to delete');
+        loadEmployees();
+      } catch(err) { alert(err.message); }
+    }
+
+    let currentPwUserId = null;
+    function openPasswordModal(id) {
+      currentPwUserId = id;
+      document.getElementById('new-password-input').value = '';
+      new bootstrap.Modal(document.getElementById('passwordModal')).show();
+    }
+
+    async function changePasswordSubmit(e) {
+      e.preventDefault();
+      const newPassword = document.getElementById('new-password-input').value;
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/employees/${currentPwUserId}/password`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+          body: JSON.stringify({ newPassword })
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+        alert('Password changed successfully');
+        bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+      } catch(err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // Export Reports — saves file locally and provides download link
+    async function triggerExport(format) {
+      const container = document.getElementById('export-link-container');
+      container.classList.remove('d-none');
+      container.innerHTML = `<span class="text-secondary"><i class="fa-solid fa-spinner fa-spin me-2"></i>Generating ${format.toUpperCase()}...</span>`;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/reports/export`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+          },
+          body: JSON.stringify({ format })
+        });
+        
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error);
+
+        container.innerHTML = `
+          <div class="d-flex align-items-center justify-content-between">
+            <span><i class="fa-solid fa-check-circle text-success me-2"></i>Export complete: <strong>${data.fileName}</strong></span>
+            <a href="${data.downloadUrl}" download target="_blank" class="btn btn-sm btn-success"><i class="fa-solid fa-download me-1"></i>Download File</a>
+          </div>
+        `;
+      } catch(err) {
+        container.innerHTML = `<span class="text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Export failed: ${err.message}</span>`;
+      }
+    }
+    // Print QR code in a clean print window
+    function printQR() {
+      const img = document.getElementById('qr-modal-img').src;
+      const title = document.getElementById('qr-modal-title').innerText;
+      const win = window.open('', '_blank', 'width=400,height=500');
+      win.document.write(`
+        <html><head><title>QR - ${title}</title>
+        <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;}
+        img{width:280px;height:280px;} p{margin-top:12px;font-size:16px;font-weight:bold;}</style>
+        </head><body>
+        <img src="${img}"><p>${title}</p>
+        <script>window.onload=()=>{window.print();window.close();}<\/script>
+        </body></html>
+      `);
+      win.document.close();
+    }
+  </script>
+  <!-- QR Code Preview Modal -->
+  <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header" style="background:#1E293B;">
+          <h5 class="modal-title text-white" id="qr-modal-title" style="font-family:'Outfit',sans-serif;font-weight:700;"></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <img id="qr-modal-img" src="" alt="QR Code"
+               style="width:220px;height:220px;border:4px solid #E2E8F0;border-radius:12px;padding:8px;background:#fff;">
+          <p class="mt-3 mb-1 text-secondary small fw-semibold">Scan to open POS at this table:</p>
+          <code id="qr-modal-link" class="small text-break d-block" style="font-size:11px;color:#475569;"></code>
+        </div>
+        <div class="modal-footer d-flex justify-content-between border-top pt-3">
+          <button id="qr-regen-btn" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-rotate-right me-1"></i>Regenerate
+          </button>
+          <div class="d-flex gap-2">
+            <button onclick="printQR()" class="btn btn-outline-dark btn-sm">
+              <i class="fa-solid fa-print me-1"></i>Print
+            </button>
+            <a id="qr-modal-download" href="" download class="btn btn-success btn-sm">
+              <i class="fa-solid fa-download me-1"></i>Download PNG
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Change Modal -->
+  <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <form onsubmit="changePasswordSubmit(event)">
+          <div class="modal-header bg-dark text-white">
+            <h5 class="modal-title font-outfit">Change Employee Password</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body py-4">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">New Password</label>
+              <input type="password" id="new-password-input" class="form-control" required minlength="6">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Save Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 Bundle JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

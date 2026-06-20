@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CafeOrbit - Premium Staff Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif']
+          },
+          animation: {
+            'blob': 'blob 7s infinite',
+          },
+          keyframes: {
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: #1a1511; 
+      background-image: url('/cafeorbit_bg.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(15, 10, 5, 0.4) 0%, rgba(20, 15, 10, 0.2) 100%);
+      backdrop-filter: blur(2px);
+      z-index: 0;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .input-glass {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: #1f2937;
+      transition: all 0.3s ease;
+    }
+    .input-glass:focus {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: #d97706; /* Amber 600 */
+      box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3);
+      outline: none;
+    }
+    .input-glass::placeholder {
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden text-gray-800">
+
+  <!-- Background Overlay -->
+  <div class="bg-overlay"></div>
+
+  <!-- Animated Background Blobs -->
+  <div class="absolute top-0 -left-4 w-72 h-72 bg-amber-600 rounded-full mix-blend-screen filter blur-2xl opacity-30 animate-blob z-0"></div>
+  <div class="absolute top-0 -right-4 w-72 h-72 bg-orange-600 rounded-full mix-blend-screen filter blur-2xl opacity-30 animate-blob animation-delay-2000 z-0"></div>
+  <div class="absolute -bottom-8 left-20 w-72 h-72 bg-yellow-700 rounded-full mix-blend-screen filter blur-2xl opacity-30 animate-blob animation-delay-4000 z-0"></div>
+
+  <!-- Login Card -->
+  <div class="glass-card rounded-2xl p-8 w-full max-w-md mx-4 relative z-10 transform transition-all duration-500">
+    <div class="text-center mb-8">
+      <img src="/logo.png" alt="CafeOrbit Logo" class="h-20 mx-auto mb-4 drop-shadow-md transition-transform hover:scale-105 duration-300">
+      <h1 class="font-outfit font-extrabold text-5xl text-gray-900 tracking-tight">CafeOrbit</h1>
+      <p class="text-sm font-bold text-amber-700 tracking-[0.2em] uppercase mt-3">Enterprise Access</p>
+    </div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+      <div id="error-alert" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2 font-medium shadow-sm">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="error-text"></span>
+      </div>
+      
+      <div>
+        <label for="email" class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Email Address</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fa-solid fa-envelope text-gray-400"></i>
+          </div>
+          <input type="email" id="email" class="input-glass w-full rounded-lg pl-10 pr-4 py-3 text-sm focus:ring-0" placeholder="admin@cafeorbit.com" required>
+        </div>
+      </div>
+      
+      <div>
+        <label for="password" class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Password</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fa-solid fa-lock text-gray-400"></i>
+          </div>
+          <input type="password" id="password" class="input-glass w-full rounded-lg pl-10 pr-4 py-3 text-sm focus:ring-0" placeholder="••••••••" required>
+        </div>
+      </div>
+      
+      <button type="submit" id="loginBtn" class="w-full bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-orange-500/40 transition-all duration-200 flex items-center justify-center gap-2 group mt-6">
+        <span>Sign In to Terminal</span>
+        <i class="fa-solid fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
+      </button>
+    </form>
+    
+    <div class="text-center mt-8">
+      <p class="text-xs text-gray-500 font-medium flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-shield-halved text-gray-400"></i> 256-bit Secure Session
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:5000' : '';
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorAlert = document.getElementById('error-alert');
+      const errorText = document.getElementById('error-text');
+      
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Authenticating...</span>';
+      btn.disabled = true;
+      errorAlert.classList.add('hidden');
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Login failed');
+        
+        localStorage.setItem('cafeorbit_token', data.token);
+        localStorage.setItem('cafeorbit_user', JSON.stringify(data.user));
+        
+        if (data.user.role === 'User/Admin') window.location.href = '/admin.html';
+        else window.location.href = '/pos.html';
+        
+      } catch (err) {
+        errorText.textContent = err.message;
+        errorAlert.classList.remove('hidden');
+        btn.innerHTML = '<span>Sign In to Terminal</span><i class="fa-solid fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>';
+        btn.disabled = false;
+      }
+    }
+
+    window.onload = () => {
+      const token = localStorage.getItem('cafeorbit_token');
+      const userStr = localStorage.getItem('cafeorbit_user');
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.role === 'User/Admin') window.location.href = '/admin.html';
+          else window.location.href = '/pos.html';
+        } catch (e) {
+          localStorage.removeItem('cafeorbit_token');
+          localStorage.removeItem('cafeorbit_user');
+        }
+      }
+    };
+  </script>
+</body>
+</html>

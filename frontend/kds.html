@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CafeOrbit - Kitchen Display System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Outfit & Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-gray-100 text-gray-800 overflow-hidden">
+  <script>
+    const token = localStorage.getItem('cafeorbit_token');
+    const userStr = localStorage.getItem('cafeorbit_user');
+    if (!token || !userStr) {
+      window.location.replace('/login.html');
+    }
+    const loggedInUser = JSON.parse(userStr);
+    
+    function logout() {
+      localStorage.removeItem('cafeorbit_token');
+      localStorage.removeItem('cafeorbit_user');
+      window.location.replace('/login.html');
+    }
+  </script>
+
+  <!-- Compact KDS Header -->
+  <header class="bg-white border-b border-gray-200 shadow-sm py-2 px-4 flex justify-between items-center shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="bg-red-500 text-white p-2 rounded flex items-center justify-center">
+        <i class="fa-solid fa-fire-burner text-xl"></i>
+      </div>
+      <div>
+        <h1 class="font-outfit text-xl font-bold text-gray-900 tracking-wide leading-tight">KITCHEN MONITOR</h1>
+        <p class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Live Order Sync Active</p>
+      </div>
+    </div>
+
+    <!-- Live Clock & Connection -->
+    <div class="hidden md:flex items-center bg-gray-100 border border-gray-300 px-3 py-1 rounded-full text-sm font-semibold text-gray-700 shadow-inner">
+      <i class="fa-solid fa-circle text-green-500 text-[10px] mr-2 animate-pulse"></i>
+      <span id="kds-clock">--:-- --</span>
+    </div>
+
+    <!-- Title block -->
+    <div>
+      <h1 class="text-3xl font-extrabold tracking-tight text-gray-800"><i class="fa-solid fa-fire-burner text-blue-600 mr-2"></i>Kitchen Display System</h1>
+      <p class="text-sm text-gray-500 font-medium tracking-wide">Live Event Mesh Synced</p>
+    </div>
+
+    <!-- User Info & Logout -->
+    <div class="flex items-center gap-4">
+      <div class="text-right border-r border-gray-300 pr-4 hidden md:block">
+        <p class="text-sm font-bold text-gray-800 m-0 leading-tight"><script>document.write(loggedInUser.name)</script></p>
+        <p class="text-[10px] text-red-500 font-bold uppercase tracking-wider m-0"><script>document.write(loggedInUser.role.split('/')[0])</script></p>
+      </div>
+      <button onclick="logout()" class="text-gray-400 hover:text-red-500 transition-colors" title="Sign Out">
+        <i class="fa-solid fa-power-off text-2xl"></i>
+      </button>
+      <img src="/logo.png" alt="CafeOrbit" class="h-12 w-auto">
+    </div>
+  </header>
+
+  <!-- KDS Columns Workspace -->
+  <main class="flex-1 flex gap-4 p-4 overflow-hidden">
+    <!-- 1. WAITING -->
+    <div class="flex-1 flex flex-col bg-gray-50 border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:bg-red-100 group">
+      <div class="bg-white group-hover:bg-transparent border-b-4 border-red-500 p-3 flex justify-between items-center shrink-0 transition-colors duration-300">
+        <h2 class="font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-hourglass-half text-red-500"></i> Waiting
+        </h2>
+        <span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full text-sm" id="count-to-cook">0</span>
+      </div>
+      <div id="col-to-cook" class="flex-1 overflow-y-auto custom-scroll p-3 grid grid-cols-1 2xl:grid-cols-2 gap-3 content-start">
+        <!-- Tickets -->
+      </div>
+    </div>
+
+    <!-- 2. PREPARING -->
+    <div class="flex-1 flex flex-col bg-gray-50 border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:bg-yellow-100 group">
+      <div class="bg-white group-hover:bg-transparent border-b-4 border-yellow-500 p-3 flex justify-between items-center shrink-0 transition-colors duration-300">
+        <h2 class="font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-fire text-yellow-500"></i> Preparing
+        </h2>
+        <span class="bg-yellow-100 text-yellow-700 font-bold px-2 py-0.5 rounded-full text-sm" id="count-preparing">0</span>
+      </div>
+      <div id="col-preparing" class="flex-1 overflow-y-auto custom-scroll p-3 grid grid-cols-1 2xl:grid-cols-2 gap-3 content-start">
+        <!-- Tickets -->
+      </div>
+    </div>
+
+    <!-- 3. COOKED -->
+    <div class="flex-1 flex flex-col bg-gray-50 border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:bg-green-100 group">
+      <div class="bg-white group-hover:bg-transparent border-b-4 border-green-500 p-3 flex justify-between items-center shrink-0 transition-colors duration-300">
+        <h2 class="font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-check-double text-green-500"></i> Cooked
+        </h2>
+        <span class="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full text-sm" id="count-completed">0</span>
+      </div>
+      <div id="col-completed" class="flex-1 overflow-y-auto custom-scroll p-3 grid grid-cols-1 2xl:grid-cols-2 gap-3 content-start">
+        <!-- Tickets -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Audio Alert -->
+  <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav" preload="auto"></audio>
+
+  <!-- Scripts -->
+  <script>
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000'
+      : ''; 
+
+    let tickets = [];
+
+    async function fetchActiveTickets() {
+      try {
+        const res = await fetch(`${API_BASE}/api/sync/kds/tickets`);
+        const data = await res.json();
+        if (data.tickets) {
+          const grouped = {};
+          data.tickets.forEach(row => {
+            if (!grouped[row.order_id]) {
+              grouped[row.order_id] = {
+                id: row.order_id,
+                orderNumber: row.order_number,
+                tableName: row.table_number ? 'T-' + String(row.table_number).padStart(2, '0') : 'Takeaway',
+                openedAt: new Date(row.created_at || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                createdAt: row.created_at || new Date().toISOString(),
+                completedAt: row.completed_at,
+                kdsStatus: row.kds_status,
+                items: []
+              };
+            }
+            grouped[row.order_id].items.push({
+              itemId: row.item_id,
+              name: row.item_name,
+              quantity: row.quantity,
+              done: false
+            });
+          });
+          tickets = Object.values(grouped);
+          renderTickets();
+        }
+      } catch (err) {
+        console.error('Failed to fetch KDS tickets', err);
+      }
+    }
+
+    let socket;
+    function connectWebSocket() {
+      const wsHost = API_BASE ? API_BASE.replace(/^https?:\/\//, '') : window.location.host;
+      const protocol = window.location.protocol === 'https:' || (API_BASE && API_BASE.startsWith('https')) ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${wsHost}`;
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => console.log('[KDS WS] Connected to Event Mesh.');
+      socket.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'KDS_NEW_TICKET') handleNewTicket(msg.payload);
+        } catch (err) {}
+      };
+      socket.onclose = () => setTimeout(connectWebSocket, 5000);
+    }
+
+    function handleNewTicket(payload) {
+      if (tickets.some(t => t.orderNumber === payload.orderNumber)) return;
+      
+      const newTicket = {
+        id: payload.orderId || Math.floor(Math.random() * 1000) + 200,
+        orderNumber: payload.orderNumber,
+        tableName: payload.tableName || 'Takeaway',
+        openedAt: new Date(payload.createdAt || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: payload.createdAt || new Date().toISOString(),
+        completedAt: null,
+        kdsStatus: 'Waiting',
+        items: payload.items.map(it => ({
+          itemId: it.itemId || Math.floor(Math.random() * 5000),
+          name: it.name,
+          quantity: it.quantity,
+          done: false
+        }))
+      };
+
+      tickets.push(newTicket);
+      try { document.getElementById('alert-sound').play(); } catch (e) {}
+      renderTickets();
+    }
+
+    function toggleItemStrike(ticketId, itemId, event) {
+      event.stopPropagation();
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+      const item = ticket.items.find(i => i.itemId === itemId);
+      if (item) {
+        item.done = !item.done;
+        renderTickets();
+      }
+    }
+
+    function progressTicket(ticketId) {
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+
+      if (ticket.kdsStatus === 'Waiting') {
+        ticket.kdsStatus = 'Preparing';
+      } else if (ticket.kdsStatus === 'Preparing') {
+        ticket.kdsStatus = 'Cooked';
+        ticket.completedAt = new Date().toISOString();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'ORDER_COMPLETED_KDS',
+            payload: { orderNumber: ticket.orderNumber, orderId: ticket.id }
+          }));
+        }
+      } else {
+        // Normally tickets are removed when marked Complete by POS, but we can keep them in Cooked.
+      }
+      renderTickets();
+    }
+
+    function recallTicket(ticketId, event) {
+      event.stopPropagation();
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+
+      ticket.kdsStatus = 'Waiting';
+      ticket.completedAt = null;
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'ORDER_RECALLED_KDS',
+          payload: { orderNumber: ticket.orderNumber, orderId: ticket.id }
+        }));
+      }
+      renderTickets();
+    }
+
+    function renderTickets() {
+      const colToCook = document.getElementById('col-to-cook');
+      const colPreparing = document.getElementById('col-preparing');
+      const colCompleted = document.getElementById('col-completed');
+
+      colToCook.innerHTML = '';
+      colPreparing.innerHTML = '';
+      colCompleted.innerHTML = '';
+
+      let toCookCount = 0, preparingCount = 0, completedCount = 0;
+
+      tickets.forEach(t => {
+        let itemsHtml = '';
+        t.items.forEach(item => {
+          const strikeClass = item.done ? 'line-through text-gray-400' : 'text-gray-800 font-semibold';
+          const iconColor = item.done ? 'text-green-500' : 'text-gray-300';
+          const qtyColor = item.done ? 'text-gray-400' : 'text-red-500';
+
+          itemsHtml += `
+            <div class="flex items-center justify-between py-2 border-b border-dashed border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors px-1" 
+                 onclick="toggleItemStrike(${t.id}, ${item.itemId}, event)">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-circle-check ${iconColor} text-lg"></i>
+                <span class="${strikeClass} text-lg tracking-tight">
+                  <span class="font-black ${qtyColor} mr-1">${item.quantity}x</span> ${item.name}
+                </span>
+              </div>
+            </div>
+          `;
+        });
+
+        // Compute durations
+        const waitMins = Math.floor((new Date() - new Date(t.createdAt)) / 60000);
+        let timeLabel = `<i class="fa-regular fa-clock mr-1"></i>${waitMins} min`;
+        let timeColor = 'text-gray-500';
+        let borderColor = 'border-t-green-500';
+
+        if (t.kdsStatus === 'Cooked') {
+          const prepMins = Math.floor((new Date(t.completedAt) - new Date(t.createdAt)) / 60000);
+          timeLabel = `<i class="fa-solid fa-flag-checkered mr-1"></i>Done in ${prepMins}m`;
+          timeColor = 'text-blue-500';
+          borderColor = 'border-t-blue-500';
+        } else {
+          // Warning colors for active tickets
+          if (t.kdsStatus === 'Waiting') borderColor = 'border-t-red-500';
+          if (t.kdsStatus === 'Preparing') borderColor = 'border-t-yellow-500';
+
+          if (waitMins >= 10) {
+            timeColor = 'text-red-500 font-bold animate-pulse';
+            borderColor = 'border-t-red-600 border-x border-x-red-200 border-b border-b-red-200 bg-red-50/20';
+          } else if (waitMins >= 5) {
+            timeColor = 'text-orange-500 font-bold';
+          }
+        }
+
+        const badgeColor = 'bg-gray-800';
+        
+        let actionFooter = '';
+        if (t.kdsStatus === 'Cooked') {
+          actionFooter = `<button onclick="recallTicket(${t.id}, event)" class="text-xs font-bold text-red-500 uppercase tracking-wider hover:text-red-700 bg-red-50 px-2 py-1 rounded transition-colors border border-red-200"><i class="fa-solid fa-rotate-left mr-1"></i>Recall</button>`;
+        } else {
+          actionFooter = `<span class="text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-gray-700">Next <i class="fa-solid fa-chevron-right ml-1"></i></span>`;
+        }
+
+        const cardHtml = `
+          <div class="bg-white border border-gray-200 rounded-md shadow-sm border-t-4 ${borderColor} cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col" onclick="progressTicket(${t.id})">
+            <div class="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50/50 rounded-t-sm">
+              <span class="${badgeColor} text-white font-mono text-xs font-bold px-2 py-1 rounded shadow-sm">${t.orderNumber}</span>
+              <span class="font-bold text-gray-800 text-sm">${t.tableName}</span>
+            </div>
+            <div class="p-3 flex-1">
+              ${itemsHtml}
+            </div>
+            <div class="flex justify-between items-center px-3 py-2 bg-gray-50 border-t border-gray-100 rounded-b-md shrink-0">
+              <span class="text-xs ${timeColor} font-medium">${timeLabel}</span>
+              ${actionFooter}
+            </div>
+          </div>
+        `;
+
+        if (t.kdsStatus === 'Waiting') {
+          colToCook.innerHTML += cardHtml;
+          toCookCount++;
+        } else if (t.kdsStatus === 'Preparing') {
+          colPreparing.innerHTML += cardHtml;
+          preparingCount++;
+        } else if (t.kdsStatus === 'Cooked') {
+          colCompleted.innerHTML += cardHtml;
+          completedCount++;
+        }
+      });
+
+      document.getElementById('count-to-cook').innerText = toCookCount;
+      document.getElementById('count-preparing').innerText = preparingCount;
+      document.getElementById('count-completed').innerText = completedCount;
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('kds-clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      connectWebSocket();
+      fetchActiveTickets();
+      setInterval(updateClock, 1000);
+      setInterval(renderTickets, 30000); // Re-render every 30s to update live wait timers
+      updateClock();
+    });
+  </script>
+</body>
+</html>
