@@ -139,6 +139,8 @@ app.post('/api/pos/orders', auth.verifyToken, posController.createOrder);
 app.post('/api/pos/orders/preview', auth.verifyToken, posController.previewPricing);
 app.post('/api/pos/orders/:id/checkout', auth.verifyToken, posController.checkoutOrder);
 app.post('/api/pos/orders/:id/send-to-kitchen', auth.verifyToken, posController.sendToKitchen);
+app.post('/api/pos/orders/:id/cancel', auth.verifyToken, posController.cancelOrder);
+app.post('/api/pos/tables/:id/clear', auth.verifyToken, posController.clearTable);
 app.get('/api/pos/kitchen-status', auth.verifyToken, posController.getActiveKitchenOrders);
 
 // Analytical Reports Endpoints

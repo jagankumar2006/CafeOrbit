@@ -79,19 +79,32 @@ async function getActiveSession(req, res) {
 // Get floor occupancy layout
 async function getOccupancy(req, res) {
   try {
-    // Get all tables and append active orders info
+    // Get all tables
     const tables = await query.all(`
-      SELECT t.*, f.name AS floor_name,
-             o.id AS active_order_id, o.order_number AS active_order_number, o.total_amount AS active_order_total
+      SELECT t.*, f.name AS floor_name
       FROM tables t
       JOIN floors f ON t.floor_id = f.id
-      LEFT JOIN orders o ON t.id = o.table_id AND o.status = 'Draft'
       WHERE t.is_active = 1
       ORDER BY f.id, t.table_number
     `);
-    res.json(tables);
+
+    // Get all active draft orders
+    const drafts = await query.all('SELECT id, table_id, order_number, total_amount FROM orders WHERE status = "Draft" AND table_id IS NOT NULL');
+
+    // Attach the first draft order to the table if it exists
+    const occupancy = tables.map(t => {
+      const activeOrder = drafts.find(d => d.table_id === t.id);
+      return {
+        ...t,
+        active_order_id: activeOrder ? activeOrder.id : null,
+        active_order_number: activeOrder ? activeOrder.order_number : null,
+        active_order_total: activeOrder ? activeOrder.total_amount : null
+      };
+    });
+
+    res.json(occupancy);
   } catch (err) {
-    console.error(err);
+    console.error('[Get Occupancy Error]:', err);
     res.status(500).json({ error: 'Failed to retrieve tables occupancy.' });
   }
 }
@@ -411,6 +424,34 @@ async function getActiveKitchenOrders(req, res) {
   }
 }
 
+// Cancel an active order to clear a table
+async function cancelOrder(req, res) {
+  const { id } = req.params;
+  try {
+    const order = await query.get('SELECT * FROM orders WHERE id = ?', [id]);
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    if (order.status !== 'Draft') return res.status(400).json({ error: 'Only Draft orders can be cancelled.' });
+
+    await query.run('UPDATE orders SET status = "Cancelled" WHERE id = ?', [id]);
+    res.json({ message: 'Order cancelled. Table is now available.' });
+  } catch (err) {
+    console.error('[Cancel Order] Error:', err);
+    res.status(500).json({ error: 'Failed to cancel order.' });
+  }
+}
+
+// Clear all draft orders for a table
+async function clearTable(req, res) {
+  const { id } = req.params;
+  try {
+    const result = await query.run('UPDATE orders SET status = "Cancelled" WHERE table_id = ? AND status = "Draft"', [id]);
+    res.json({ message: `Table cleared successfully. Cancelled ${result.changes} orders.` });
+  } catch (err) {
+    console.error('[Clear Table] Error:', err);
+    res.status(500).json({ error: 'Failed to clear table.' });
+  }
+}
+
 module.exports = {
   openSession,
   closeSession,
@@ -420,5 +461,7 @@ module.exports = {
   previewPricing,
   checkoutOrder,
   sendToKitchen,
-  getActiveKitchenOrders
+  getActiveKitchenOrders,
+  cancelOrder,
+  clearTable
 };

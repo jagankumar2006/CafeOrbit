@@ -224,12 +224,12 @@
       setTimeout(() => t.style.transform = 'translateY(150px)', 3000);
     }
 
-    function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login.html'; }
+    function logout() { localStorage.removeItem('cafeorbit_token'); localStorage.removeItem('cafeorbit_user'); window.location.href = '/login.html'; }
 
     async function initPOS() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('cafeorbit_token');
       if (!token) return logout();
-      loggedInUser = JSON.parse(localStorage.getItem('user'));
+      loggedInUser = JSON.parse(localStorage.getItem('cafeorbit_user'));
       document.getElementById('user-name-display').innerText = loggedInUser.name;
       document.getElementById('user-role-display').innerText = loggedInUser.role.split('/')[0];
       
@@ -255,6 +255,7 @@
       renderCategories();
       renderProducts();
       updateSessionUI();
+      fetchTables();
       connectWebSocket();
       fetchKitchenStatus();
     }
@@ -276,7 +277,10 @@
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'ORDER_COMPLETED_KDS') showToast(`Order ${msg.payload.orderNumber} is Ready!`);
-          if (['KDS_NEW_TICKET', 'TICKET_STATUS_UPDATED', 'ORDER_COMPLETED_KDS'].includes(msg.type)) fetchKitchenStatus();
+          if (msg.type === 'KDS_NEW_TICKET' || msg.type === 'TICKET_STATUS_UPDATED') {
+            fetchKitchenStatus();
+            fetchTables();
+          }
         } catch (e) {}
       };
       socket.onclose = () => setTimeout(connectWebSocket, 5000);
@@ -301,7 +305,7 @@
     // KITCHEN TRACKER
     async function fetchKitchenStatus() {
       try {
-        const res = await fetch(`${API_BASE}/api/pos/kitchen-status`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+        const res = await fetch(`${API_BASE}/api/pos/kitchen-status`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` } });
         if (res.ok) {
           const tickets = await res.json();
           const badge = document.getElementById('kitchen-badge');
@@ -427,7 +431,7 @@
       try {
         const payload = { items: cart.map(i => ({ productId: i.id, quantity: i.quantity })), couponCode: currentCoupon };
         const res = await fetch(`${API_BASE}/api/pos/orders/preview`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -479,7 +483,7 @@
     async function openSession() {
       const b = document.getElementById('opening-balance').value;
       const res = await fetch(`${API_BASE}/api/pos/sessions/open`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` },
         body: JSON.stringify({ opening_balance: parseFloat(b) })
       });
       if (res.ok) {
@@ -495,7 +499,7 @@
 
     async function closeSession() {
       const res = await fetch(`${API_BASE}/api/pos/sessions/close`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` },
         body: JSON.stringify({ sessionId: currentSession.id, closing_balance: currentSession.opening_balance }) // simplified
       });
       if (res.ok) {
@@ -506,8 +510,59 @@
       }
     }
 
-    function openTableSelector() { document.getElementById('table-modal').classList.remove('hidden'); }
+    function openTableSelector() { fetchTables(); document.getElementById('table-modal').classList.remove('hidden'); }
     function closeTableSelector() { document.getElementById('table-modal').classList.add('hidden'); }
+
+    async function fetchTables() {
+      try {
+        const res = await fetch(`${API_BASE}/api/pos/occupancy`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` } });
+        if (res.ok) {
+          const tables = await res.json();
+          renderTables(tables);
+        }
+      } catch (e) { console.error('Error fetching tables', e); }
+    }
+
+    function renderTables(tables) {
+      const grid = document.getElementById('table-grid');
+      grid.innerHTML = tables.map(t => {
+        const isOccupied = t.active_order_id !== null;
+        const bgClass = isOccupied ? 'bg-red-500/20 border-red-500/50' : 'bg-green-500/20 border-green-500/50';
+        const textClass = isOccupied ? 'text-red-400' : 'text-green-400';
+        return `
+          <div class="relative group">
+            <button onclick="selectTable(${t.id}, '${t.table_number}')" class="w-full flex flex-col items-center justify-center p-4 border rounded-xl transition-all hover:bg-white/10 ${bgClass}">
+              <i class="fa-solid fa-chair text-2xl mb-2 ${textClass}"></i>
+              <span class="font-bold text-white">${t.table_number}</span>
+              <span class="text-xs text-gray-400">${t.floor_name}</span>
+              <span class="text-xs ${textClass} font-semibold mt-1">${isOccupied ? 'Occupied' : 'Available'}</span>
+            </button>
+            ${isOccupied ? `<button onclick="clearTable(event, ${t.id})" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded shadow hidden group-hover:block transition-all" title="Clear Table">Clear</button>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function clearTable(e, tableId) {
+      e.stopPropagation();
+      if (!confirm('Are you sure you want to clear this table and cancel its active order?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/pos/tables/${tableId}/clear`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` }});
+        if (res.ok) {
+          showToast('Table cleared successfully!');
+          fetchTables();
+        } else {
+          const data = await res.json();
+          showToast(`Failed: ${data.error || 'Unknown error'}`);
+        }
+      } catch (err) { console.error(err); }
+    }
+
+    function selectTable(id, number) {
+      selectedTable = { id, number };
+      document.getElementById('active-table-display').innerText = number;
+      closeTableSelector();
+    }
 
     function openPaymentModal() {
       if (!currentSession) return showToast('Open a session first!');
@@ -573,14 +628,14 @@
       if (!currentSession) return showToast('Open a session first!');
       if (cart.length === 0) return showToast('Cart is empty!');
       try {
-        const payload = { sessionId: currentSession.id, items: cart.map(i => ({ productId: i.id, quantity: i.quantity })), couponCode: currentCoupon };
+        const payload = { sessionId: currentSession.id, tableId: selectedTable ? selectedTable.id : null, items: cart.map(i => ({ productId: i.id, quantity: i.quantity })), couponCode: currentCoupon };
         const res = await fetch(`${API_BASE}/api/pos/orders`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
           const data = await res.json();
-          await fetch(`${API_BASE}/api/pos/orders/${data.order.id}/send-to-kitchen`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }});
+          await fetch(`${API_BASE}/api/pos/orders/${data.order.id}/send-to-kitchen`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('cafeorbit_token')}` }});
           showToast('Sent to kitchen successfully!');
           cart = [];
           currentCoupon = '';
