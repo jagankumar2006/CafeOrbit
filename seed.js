@@ -74,7 +74,7 @@ async function seed() {
       ['Fresh Nimbu Pani',   cat2.id, 90.00, 'glass', 12.00, 'Freshly squeezed lemonade with sparkling water, mint, and masala.']
     );
 
-    // Bakery & Pastry
+    // Bakery 
     await query.run(
       'INSERT INTO products (name, category_id, price, unit_of_measure, tax_percentage, description) VALUES (?, ?, ?, ?, ?, ?)',
       ['Bun Maska',   cat3.id, 120.00, 'pcs', 5.00, 'Soft bun slathered with generous amounts of butter.']
@@ -122,7 +122,7 @@ async function seed() {
     console.log('[Seed] Payment Methods seeded');
 
     // 6. Seed Promotions
-    // Product-level: Buy 2+, get ₹1.50 off per item
+    // Product-level: Buy 2+, get ₹2.50 off per item
     await query.run(
       'INSERT INTO promotions (type, discount_type, discount_value, min_quantity, min_order_amount, is_active) VALUES (?, ?, ?, ?, ?, ?)',
       ['Automated Product Promotion', 'Fixed Amount', 1.50, 2, null, 1]
@@ -133,6 +133,7 @@ async function seed() {
       ['Automated Order Promotion', 'Percentage', 10.00, null, 30.00, 1]
     );
     // Coupon codes
+    // when apply 20% discount 
     await query.run(
       'INSERT INTO promotions (type, code, discount_type, discount_value, min_quantity, min_order_amount, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
       ['Coupon', 'WELCOME10', 'Percentage',  10.00, null, null, 1]
